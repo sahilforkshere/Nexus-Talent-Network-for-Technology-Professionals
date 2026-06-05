@@ -1,3 +1,3 @@
-module github.com/sahilpal/nexus/network-svc
+module github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/network-svc
 
 go 1.26.2

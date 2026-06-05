@@ -1,3 +1,3 @@
-module github.com/sahilpal/nexus/search-svc
+module github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc
 
 go 1.26.2

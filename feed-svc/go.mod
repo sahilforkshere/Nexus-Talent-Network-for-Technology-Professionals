@@ -1,3 +1,3 @@
-module github.com/sahilpal/nexus/feed-svc
+module github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/feed-svc
 
 go 1.26.2
