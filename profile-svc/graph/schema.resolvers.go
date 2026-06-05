@@ -107,9 +107,29 @@ func (r *mutationResolver) UpdateProfile(ctx context.Context, input model.Update
 	return dbUserToModel(u), nil
 }
 
-// AddSkill — Day 6
+// AddSkill adds a skill to the logged-in user's profile
 func (r *mutationResolver) AddSkill(ctx context.Context, name string) (*model.Skill, error) {
-	return nil, fmt.Errorf("not implemented yet")
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("not authenticated")
+	}
+
+	// Insert skill into master skills table (or get existing)
+	skillID, err := userdb.UpsertSkill(ctx, r.DB, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create skill")
+	}
+
+	// Link skill to this user
+	if err := userdb.LinkSkillToUser(ctx, r.DB, userID, skillID); err != nil {
+		return nil, fmt.Errorf("failed to link skill to user")
+	}
+
+	return &model.Skill{
+		SkillID:  skillID,
+		Name:     name,
+		Endorsed: int32(0),
+	}, nil
 }
 
 // GetProfile returns a user's public profile by ID
@@ -118,7 +138,12 @@ func (r *queryResolver) GetProfile(ctx context.Context, userID string) (*model.U
 	if err != nil {
 		return nil, fmt.Errorf("user not found")
 	}
-	return dbUserToModel(u), nil
+	user := dbUserToModel(u)
+	skills, _ := userdb.GetUserSkills(ctx, r.DB, userID)
+	for _, s := range skills {
+		user.Skills = append(user.Skills, &model.Skill{SkillID: s.SkillID, Name: s.Name, Endorsed: int32(s.Endorsed)})
+	}
+	return user, nil
 }
 
 // Me returns the currently logged-in user's profile (reads user_id from JWT in context)
@@ -131,7 +156,12 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("user not found")
 	}
-	return dbUserToModel(u), nil
+	user := dbUserToModel(u)
+	skills, _ := userdb.GetUserSkills(ctx, r.DB, userID)
+	for _, s := range skills {
+		user.Skills = append(user.Skills, &model.Skill{SkillID: s.SkillID, Name: s.Name, Endorsed: int32(s.Endorsed)})
+	}
+	return user, nil
 }
 
 // dbUserToModel converts the internal DB struct to the GraphQL model
