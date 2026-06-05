@@ -1,0 +1,72 @@
+# GraphQL schema for the Profile subgraph.
+#
+# @key(fields: "user_id") is a Federation directive — it tells Apollo Router
+# that User is an entity other services can reference using user_id.
+# e.g. the Feed service can say "give me the author of this post"
+# and Apollo Router fetches the User from THIS service automatically.
+
+type User @key(fields: "user_id") {
+  user_id:    ID!
+  email:      String!
+  name:       String!
+  headline:   String
+  bio:        String
+  location:   String
+  avatar_url: String
+  skills:     [Skill!]!
+  created_at: String!
+}
+
+type Skill {
+  skill_id: ID!
+  name:     String!
+  endorsed: Int!
+}
+
+type AuthPayload {
+  access_token:  String!
+  refresh_token: String!
+  user:          User!
+}
+
+type Query {
+  # Get a user's full profile by their ID
+  getProfile(user_id: ID!): User
+
+  # Get the currently logged-in user's profile (from JWT token)
+  me: User
+}
+
+type Mutation {
+  # Register a new user — returns JWT tokens on success
+  register(input: RegisterInput!): AuthPayload!
+
+  # Login with email + password
+  login(input: LoginInput!): AuthPayload!
+
+  # Update profile fields
+  updateProfile(input: UpdateProfileInput!): User!
+
+  # Add a skill to the logged-in user's profile
+  addSkill(name: String!): Skill!
+}
+
+input RegisterInput {
+  email:    String!
+  password: String!
+  name:     String!
+  location: String
+}
+
+input LoginInput {
+  email:    String!
+  password: String!
+}
+
+input UpdateProfileInput {
+  name:       String
+  headline:   String
+  bio:        String
+  location:   String
+  avatar_url: String
+}
