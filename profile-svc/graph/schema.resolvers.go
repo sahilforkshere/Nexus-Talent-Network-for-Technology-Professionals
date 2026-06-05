@@ -75,9 +75,36 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 	}, nil
 }
 
-// UpdateProfile — Day 6
+// UpdateProfile updates the logged-in user's profile fields
 func (r *mutationResolver) UpdateProfile(ctx context.Context, input model.UpdateProfileInput) (*model.User, error) {
-	return nil, fmt.Errorf("not implemented yet")
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("not authenticated")
+	}
+
+	// Use empty string for unset optional fields — DB uses COALESCE to keep existing value
+	name, headline, bio, location, avatarURL := "", "", "", "", ""
+	if input.Name != nil {
+		name = *input.Name
+	}
+	if input.Headline != nil {
+		headline = *input.Headline
+	}
+	if input.Bio != nil {
+		bio = *input.Bio
+	}
+	if input.Location != nil {
+		location = *input.Location
+	}
+	if input.AvatarURL != nil {
+		avatarURL = *input.AvatarURL
+	}
+
+	u, err := userdb.UpdateUser(ctx, r.DB, userID, name, headline, bio, location, avatarURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update profile")
+	}
+	return dbUserToModel(u), nil
 }
 
 // AddSkill — Day 6

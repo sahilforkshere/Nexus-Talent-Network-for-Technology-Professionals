@@ -50,6 +50,29 @@ func GetUserByEmail(ctx context.Context, db *sql.DB, email string) (*User, error
 	return u, err
 }
 
+// UpdateUser updates editable profile fields, returns the updated user
+func UpdateUser(ctx context.Context, db *sql.DB, userID, name, headline, bio, location, avatarURL string) (*User, error) {
+	u := &User{}
+	err := db.QueryRowContext(ctx, `
+		UPDATE users SET
+			name       = COALESCE(NULLIF($2,''), name),
+			headline   = COALESCE(NULLIF($3,''), headline),
+			bio        = COALESCE(NULLIF($4,''), bio),
+			location   = COALESCE(NULLIF($5,''), location),
+			avatar_url = COALESCE(NULLIF($6,''), avatar_url),
+			updated_at = NOW()
+		WHERE user_id = $1
+		RETURNING user_id, email, password_hash, name,
+		          COALESCE(headline,''), COALESCE(bio,''), COALESCE(location,''),
+		          COALESCE(avatar_url,''), created_at::text
+	`, userID, name, headline, bio, location, avatarURL).Scan(
+		&u.UserID, &u.Email, &u.PasswordHash, &u.Name,
+		&u.Headline.String, &u.Bio.String, &u.Location.String,
+		&u.AvatarURL.String, &u.CreatedAt,
+	)
+	return u, err
+}
+
 // GetUserByID fetches a user by their UUID — used in getProfile and me queries
 func GetUserByID(ctx context.Context, db *sql.DB, userID string) (*User, error) {
 	u := &User{}
