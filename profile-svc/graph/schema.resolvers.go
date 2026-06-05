@@ -30,6 +30,9 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		return nil, fmt.Errorf("email already registered")
 	}
 
+	// Mirror the new user as a Person node in Neo4j for graph traversal queries
+	_ = userdb.CreatePersonNode(ctx, r.Neo4j, u.UserID, u.Name, location)
+
 	// Generate JWT tokens
 	accessToken, err := auth.GenerateAccessToken(u.UserID)
 	if err != nil {
@@ -120,10 +123,13 @@ func (r *mutationResolver) AddSkill(ctx context.Context, name string) (*model.Sk
 		return nil, fmt.Errorf("failed to create skill")
 	}
 
-	// Link skill to this user
+	// Link skill to this user in Postgres
 	if err := userdb.LinkSkillToUser(ctx, r.DB, userID, skillID); err != nil {
 		return nil, fmt.Errorf("failed to link skill to user")
 	}
+
+	// Mirror the HAS_SKILL relationship in Neo4j so graph traversal queries work
+	_ = userdb.LinkSkillInGraph(ctx, r.Neo4j, userID, name)
 
 	return &model.Skill{
 		SkillID:  skillID,
