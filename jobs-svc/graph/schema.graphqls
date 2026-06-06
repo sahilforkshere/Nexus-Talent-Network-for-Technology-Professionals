@@ -1,0 +1,35 @@
+type Job {
+  job_id: ID!
+  posted_by: ID
+  title: String!
+  company: String!
+  location: String
+  job_type: String!
+  experience_level: String!
+  salary_min: Int
+  salary_max: Int
+  description: String!
+  is_active: Boolean!
+  created_at: String!
+}
+
+input PostJobInput {
+  title: String!
+  company: String!
+  location: String
+  job_type: String!
+  experience_level: String!
+  salary_min: Int
+  salary_max: Int
+  description: String!
+}
+
+type Query {
+  getJob(job_id: ID!): Job
+  listJobs: [Job!]!
+  searchJobs(keyword: String!): [Job!]!
+}
+
+type Mutation {
+  postJob(input: PostJobInput!): Job!
+}
