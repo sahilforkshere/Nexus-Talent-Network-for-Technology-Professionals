@@ -1,0 +1,99 @@
+================================================================================
+NEXUS — TESTING CREDENTIALS & REFERENCE
+================================================================================
+
+ALL USERS (password for everyone: nexus123)
+--------------------------------------------
+Sahil Pal     | sahil@nexus.com | user_id: e51c8d53-ff90-4e9f-9c28-b7e9c7623d47
+Rahul Sharma  | rahul@nexus.com | user_id: 2abee1c1-2c9c-4293-a59f-a28f24a073c8
+Priya Singh   | priya@nexus.com | user_id: c2366e2c-4dd3-4fc2-aab2-0c9dbd65b452
+Arjun Mehta   | arjun@nexus.com | user_id: 0a3e4548-e29f-44cc-9cc5-71bdb007b52d
+Rakhi Dalal   | rakhi@nexus.com | user_id: ba70578e-a605-416d-8cb4-568605315326
+
+
+SERVICES & PORTS
+----------------
+profile-svc   → localhost:4001  (register, login, updateProfile, addSkill)
+network-svc   → localhost:4002  (sendConnectionRequest, acceptConnection, getPeopleYouMayKnow)
+jobs-svc      → localhost:4003  (not built yet)
+feed-svc      → localhost:4004  (not built yet)
+search-svc    → localhost:4005  (not built yet)
+
+
+INFRASTRUCTURE
+--------------
+PostgreSQL    → localhost:5432   user: nexus  password: nexus  db: nexus
+Neo4j         → localhost:7687   user: neo4j  password: nexuspassword
+              → browser at localhost:7474
+Kafka         → localhost:9092
+Redis         → localhost:6379
+Elasticsearch → localhost:9200
+
+
+STARTING SERVICES
+-----------------
+Terminal 1:  cd /Users/sahil/Documents/Nexus/profile-svc && go run .
+Terminal 2:  cd /Users/sahil/Documents/Nexus/network-svc && go run .
+Docker:      cd /Users/sahil/Documents/Nexus && docker compose up -d
+
+
+HOW TO GET AN ACCESS TOKEN (run at localhost:4001)
+--------------------------------------------------
+mutation {
+  login(input: {
+    email: "sahil@nexus.com"
+    password: "nexus123"
+  }) {
+    access_token
+    user { user_id }
+  }
+}
+
+Paste the token in the Headers panel (bottom of GraphQL Playground):
+{
+  "Authorization": "Bearer <paste_token_here_no_line_breaks>"
+}
+
+
+USEFUL GRAPHQL MUTATIONS (localhost:4002)
+-----------------------------------------
+
+Send connection request (as user A):
+  mutation {
+    sendConnectionRequest(to_user_id: "<user_b_id>") {
+      status
+    }
+  }
+
+Accept connection (as user B):
+  mutation {
+    acceptConnection(from_user_id: "<user_a_id>")
+  }
+
+People you may know (as any user):
+  query {
+    getPeopleYouMayKnow {
+      name
+      location
+      mutual_count
+    }
+  }
+
+
+USEFUL DB QUERIES (run in terminal)
+-------------------------------------
+# List all users
+docker exec nexus-postgres-1 psql -U nexus -d nexus -c "SELECT user_id, name, email FROM users;"
+
+# List all Neo4j edges
+docker exec nexus-neo4j-1 cypher-shell -u neo4j -p nexuspassword "MATCH (a)-[r]->(b) RETURN a.name, type(r), b.name"
+
+# Check Kafka topics
+docker exec nexus-kafka-1 kafka-topics --bootstrap-server localhost:9092 --list
+
+
+CONNECTIONS ESTABLISHED SO FAR
+-------------------------------
+Sahil ↔ Rahul  (CONNECTED_TO in Neo4j)
+Rahul → Priya  (PENDING — acceptConnection not done yet)
+================================================================================
