@@ -12,6 +12,7 @@ import (
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/graph/model"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/auth"
 	jobsdb "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/db"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/embedding"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/kafka"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/search"
 )
@@ -61,6 +62,15 @@ func (r *mutationResolver) PostJob(ctx context.Context, input model.PostJobInput
 
 	kafka.PublishJobPosted(ctx, j.JobID, j.Title, j.Company, loc)
 
+	// generate and store vector embedding asynchronously so it doesn't slow down the response
+	go func() {
+		text := j.Title + " " + j.Company + " " + j.Description
+		vec, err := embedding.EmbedText(context.Background(), text)
+		if err == nil {
+			_ = embedding.StoreJobEmbedding(context.Background(), r.DB, j.JobID, vec)
+		}
+	}()
+
 	return dbJobToModel(j), nil
 }
 
@@ -93,6 +103,27 @@ func (r *queryResolver) SearchJobs(ctx context.Context, keyword string) ([]*mode
 		return nil, fmt.Errorf("search failed")
 	}
 
+	var result []*model.Job
+	for _, id := range ids {
+		j, err := jobsdb.GetJobByID(ctx, r.DB, id)
+		if err != nil {
+			continue
+		}
+		result = append(result, dbJobToModel(j))
+	}
+	return result, nil
+}
+
+// SemanticSearchJobs embeds the query and finds similar jobs by vector distance
+func (r *queryResolver) SemanticSearchJobs(ctx context.Context, query string) ([]*model.Job, error) {
+	vec, err := embedding.EmbedText(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("embedding failed")
+	}
+	ids, err := embedding.SemanticSearch(ctx, r.DB, vec, 10)
+	if err != nil {
+		return nil, fmt.Errorf("semantic search failed")
+	}
 	var result []*model.Job
 	for _, id := range ids {
 		j, err := jobsdb.GetJobByID(ctx, r.DB, id)

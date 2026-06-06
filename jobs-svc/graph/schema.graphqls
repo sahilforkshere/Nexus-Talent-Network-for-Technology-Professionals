@@ -28,6 +28,7 @@ type Query {
   getJob(job_id: ID!): Job
   listJobs: [Job!]!
   searchJobs(keyword: String!): [Job!]!
+  semanticSearchJobs(query: String!): [Job!]!
 }
 
 type Mutation {

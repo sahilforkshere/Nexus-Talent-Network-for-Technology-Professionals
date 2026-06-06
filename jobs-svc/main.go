@@ -13,6 +13,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/graph"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/auth"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/embedding"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/kafka"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/search"
 )
@@ -31,6 +32,14 @@ func main() {
 	}
 	log.Println("connected to postgres")
 
+	// ensure pgvector extension and job_embeddings table exist
+	_, _ = db.Exec(`CREATE EXTENSION IF NOT EXISTS vector`)
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS job_embeddings (
+		job_id UUID PRIMARY KEY REFERENCES jobs(job_id) ON DELETE CASCADE,
+		embedding vector(1536) NOT NULL
+	)`)
+	_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS job_embeddings_hnsw ON job_embeddings USING hnsw (embedding vector_l2_ops)`)
+
 	esURL := os.Getenv("ELASTICSEARCH_URL")
 	if esURL == "" {
 		esURL = "http://localhost:9200"
@@ -45,6 +54,13 @@ func main() {
 		kafkaBroker = "localhost:9092"
 	}
 	kafka.Init(kafkaBroker)
+
+	openAIKey := os.Getenv("OPENAI_API_KEY")
+	if openAIKey == "" {
+		log.Fatal("OPENAI_API_KEY env var is required")
+	}
+	embedding.Init(openAIKey)
+	log.Println("embedding client initialized")
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{DB: db},

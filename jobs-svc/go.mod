@@ -7,6 +7,7 @@ require (
 	github.com/elastic/go-elasticsearch/v8 v8.13.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/lib/pq v1.12.3
+	github.com/sashabaranov/go-openai v1.41.2
 	github.com/segmentio/kafka-go v0.4.51
 	github.com/vektah/gqlparser/v2 v2.5.26
 )
