@@ -33,25 +33,37 @@ func (r *mutationResolver) CreatePost(ctx context.Context, content string) (*mod
 	}, nil
 }
 
-// GetFeed reads the logged-in user's feed from Redis, then fetches full post details from Postgres.
-// Redis = fast ordered list of IDs. Postgres = actual content.
+// GetFeed reads the logged-in user's feed from Redis, then fetches full details from Postgres.
+// Items can be posts (plain UUID) or jobs (prefixed with "job:")
 func (r *queryResolver) GetFeed(ctx context.Context) ([]*model.FeedItem, error) {
 	userID, ok := auth.UserIDFromContext(ctx)
 	if !ok {
 		return nil, fmt.Errorf("not authenticated")
 	}
 
-	postIDs, err := cache.GetFeed(ctx, r.Redis, userID)
+	ids, err := cache.GetFeed(ctx, r.Redis, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read feed")
 	}
 
+	var items []*model.FeedItem
+
+	// separate post IDs and job IDs
+	var postIDs []string
+	var jobEntries []string
+	for _, id := range ids {
+		if len(id) > 4 && id[:4] == "job:" {
+			jobEntries = append(jobEntries, id)
+		} else {
+			postIDs = append(postIDs, id)
+		}
+	}
+
+	// fetch real posts from Postgres
 	posts, err := feeddb.GetPostsByIDs(ctx, r.DB, postIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch posts")
 	}
-
-	var items []*model.FeedItem
 	for _, p := range posts {
 		items = append(items, &model.FeedItem{
 			PostID:    p.PostID,
@@ -60,6 +72,22 @@ func (r *queryResolver) GetFeed(ctx context.Context) ([]*model.FeedItem, error) 
 			CreatedAt: p.CreatedAt,
 		})
 	}
+
+	// fetch jobs from Postgres and show as feed items
+	for _, entry := range jobEntries {
+		jobID := entry[4:] // strip "job:" prefix
+		j, err := feeddb.GetJobByID(ctx, r.DB, jobID)
+		if err != nil {
+			continue
+		}
+		items = append(items, &model.FeedItem{
+			PostID:    "job:" + j.JobID,
+			UserID:    j.PostedBy,
+			Content:   "[JOB] " + j.Title + " at " + j.Company + " — " + j.Location,
+			CreatedAt: j.CreatedAt,
+		})
+	}
+
 	return items, nil
 }
 

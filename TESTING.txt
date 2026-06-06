@@ -1,5 +1,6 @@
 ================================================================================
 NEXUS — TESTING CREDENTIALS & REFERENCE
+Last updated: Day 10 Phase 1
 ================================================================================
 
 ALL USERS (password for everyone: nexus123)
@@ -15,9 +16,9 @@ SERVICES & PORTS
 ----------------
 profile-svc   → localhost:4001  (register, login, updateProfile, addSkill)
 network-svc   → localhost:4002  (sendConnectionRequest, acceptConnection, getPeopleYouMayKnow)
-jobs-svc      → localhost:4003  (not built yet)
-feed-svc      → localhost:4004  (not built yet)
-search-svc    → localhost:4005  (not built yet)
+jobs-svc      → localhost:4003  (postJob, getJob, listJobs, searchJobs)
+feed-svc      → localhost:4004  (createPost, getFeed)
+search-svc    → localhost:4005  (not built yet — Day 11)
 
 
 INFRASTRUCTURE
@@ -30,10 +31,12 @@ Redis         → localhost:6379
 Elasticsearch → localhost:9200
 
 
-STARTING SERVICES
------------------
-Terminal 1:  cd /Users/sahil/Documents/Nexus/profile-svc && go run .
-Terminal 2:  cd /Users/sahil/Documents/Nexus/network-svc && go run .
+STARTING ALL SERVICES
+---------------------
+Terminal 1:  cd /Users/sahil/Documents/Nexus/profile-svc  && go run .
+Terminal 2:  cd /Users/sahil/Documents/Nexus/network-svc  && go run .
+Terminal 3:  cd /Users/sahil/Documents/Nexus/jobs-svc     && go run .
+Terminal 4:  cd /Users/sahil/Documents/Nexus/feed-svc     && go run .
 Docker:      cd /Users/sahil/Documents/Nexus && docker compose up -d
 
 
@@ -53,47 +56,202 @@ Paste the token in the Headers panel (bottom of GraphQL Playground):
 {
   "Authorization": "Bearer <paste_token_here_no_line_breaks>"
 }
+IMPORTANT: token must be on ONE line, no line breaks inside the string.
 
 
-USEFUL GRAPHQL MUTATIONS (localhost:4002)
------------------------------------------
+================================================================================
+PROFILE-SVC  (localhost:4001)
+================================================================================
 
-Send connection request (as user A):
+Register new user:
   mutation {
-    sendConnectionRequest(to_user_id: "<user_b_id>") {
+    register(input: {
+      email: "test@nexus.com"
+      password: "nexus123"
+      name: "Test User"
+      location: "Delhi"
+    }) {
+      access_token
+      user { user_id }
+    }
+  }
+
+Login:
+  mutation {
+    login(input: { email: "sahil@nexus.com" password: "nexus123" }) {
+      access_token
+      user { user_id }
+    }
+  }
+
+Update profile (needs token):
+  mutation {
+    updateProfile(input: { headline: "Backend Engineer" bio: "I love Go" }) {
+      name headline bio
+    }
+  }
+
+Add skill (needs token):
+  mutation {
+    addSkill(name: "Go") { skill_id name }
+  }
+
+Get profile:
+  query {
+    getProfile(user_id: "e51c8d53-ff90-4e9f-9c28-b7e9c7623d47") {
+      name headline skills { name }
+    }
+  }
+
+My profile (needs token):
+  query {
+    me { name email skills { name } }
+  }
+
+
+================================================================================
+NETWORK-SVC  (localhost:4002)
+================================================================================
+
+Send connection request (needs token of sender):
+  mutation {
+    sendConnectionRequest(to_user_id: "2abee1c1-2c9c-4293-a59f-a28f24a073c8") {
       status
     }
   }
 
-Accept connection (as user B):
+Accept connection (needs token of receiver):
   mutation {
-    acceptConnection(from_user_id: "<user_a_id>")
+    acceptConnection(from_user_id: "e51c8d53-ff90-4e9f-9c28-b7e9c7623d47")
   }
 
-People you may know (as any user):
+People you may know (needs token):
   query {
     getPeopleYouMayKnow {
-      name
-      location
-      mutual_count
+      name location mutual_count
     }
   }
 
 
-USEFUL DB QUERIES (run in terminal)
--------------------------------------
+CONNECTIONS ESTABLISHED IN NEO4J
+---------------------------------
+Sahil ↔ Rahul  (CONNECTED_TO — bidirectional)
+Rahul → Priya  (PENDING_REQUEST — not accepted yet)
+
+To verify in Neo4j:
+  docker exec nexus-neo4j-1 cypher-shell -u neo4j -p nexuspassword \
+    "MATCH (a)-[r]->(b) RETURN a.name, type(r), b.name"
+
+
+================================================================================
+JOBS-SVC  (localhost:4003)
+================================================================================
+
+Post a job (needs token):
+  mutation {
+    postJob(input: {
+      title: "Backend Engineer"
+      company: "Google"
+      location: "Bangalore"
+      job_type: "FULL_TIME"
+      experience_level: "MID"
+      salary_min: 2000000
+      salary_max: 3000000
+      description: "Build scalable Go microservices for Google Search"
+    }) {
+      job_id title company
+    }
+  }
+
+List all jobs (no token needed):
+  query {
+    listJobs { job_id title company location }
+  }
+
+Get single job:
+  query {
+    getJob(job_id: "<job_id>") { title company description }
+  }
+
+Search jobs (Elasticsearch):
+  query {
+    searchJobs(keyword: "Go") { title company location }
+  }
+
+Valid job_type values:    FULL_TIME | PART_TIME | CONTRACT | INTERNSHIP
+Valid experience_level:   INTERN | JUNIOR | MID | SENIOR | LEAD
+
+On postJob, three things happen automatically:
+  1. Saved in PostgreSQL
+  2. Indexed in Elasticsearch (searchable)
+  3. Kafka publishes job_posted event
+
+
+================================================================================
+FEED-SVC  (localhost:4004)
+================================================================================
+
+Create a post (needs token):
+  mutation {
+    createPost(content: "Just joined Nexus! Excited to connect.") {
+      post_id content created_at
+    }
+  }
+
+Get your feed (needs token):
+  query {
+    getFeed {
+      post_id user_id content created_at
+    }
+  }
+
+How the feed works:
+  createPost → saves to PostgreSQL posts table (author_id column)
+             → pushes post_id to Redis sorted set  key: feed:{user_id}
+  getFeed    → reads post IDs from Redis (newest first)
+             → fetches full content from PostgreSQL
+
+
+================================================================================
+USEFUL DB QUERIES (terminal)
+================================================================================
+
 # List all users
 docker exec nexus-postgres-1 psql -U nexus -d nexus -c "SELECT user_id, name, email FROM users;"
 
+# List all posts
+docker exec nexus-postgres-1 psql -U nexus -d nexus -c "SELECT post_id, author_id, content FROM posts;"
+
+# List all jobs
+docker exec nexus-postgres-1 psql -U nexus -d nexus -c "SELECT job_id, title, company FROM jobs;"
+
 # List all Neo4j edges
 docker exec nexus-neo4j-1 cypher-shell -u neo4j -p nexuspassword "MATCH (a)-[r]->(b) RETURN a.name, type(r), b.name"
+
+# Check Redis feed for Sahil
+docker exec nexus-redis-1 redis-cli ZREVRANGE "feed:e51c8d53-ff90-4e9f-9c28-b7e9c7623d47" 0 -1
+
+# Check Elasticsearch jobs index
+curl -s http://localhost:9200/jobs/_count
 
 # Check Kafka topics
 docker exec nexus-kafka-1 kafka-topics --bootstrap-server localhost:9092 --list
 
 
-CONNECTIONS ESTABLISHED SO FAR
--------------------------------
-Sahil ↔ Rahul  (CONNECTED_TO in Neo4j)
-Rahul → Priya  (PENDING — acceptConnection not done yet)
+================================================================================
+WHAT IS BUILT (Days 1-10 Phase 1)
+================================================================================
+
+Day 1-2  : Docker infra (Postgres, Neo4j, Kafka, Redis, Elasticsearch)
+Day 3-5  : profile-svc — auth, JWT, bcrypt, GraphQL, Postgres, Neo4j
+Day 6-7  : profile-svc — addSkill, Neo4j HAS_SKILL edges
+Day 8    : network-svc — connection requests, CONNECTED_TO graph, people you may know
+Day 8 P1 : Kafka flow — profile-svc publishes user_created, network-svc consumes it
+Day 9    : jobs-svc — postJob, search (Elasticsearch), Kafka job_posted event
+Day 10P1 : feed-svc — createPost, getFeed (Redis sorted set + Postgres)
+
+NEXT:
+Day 10P2 : feed-svc Kafka consumer — auto-push job_posted to all user feeds
+Day 11   : GraphQL Federation (Apollo Router) — one unified API at :4000
+Day 12   : Semantic job search with pgvector + embeddings
 ================================================================================

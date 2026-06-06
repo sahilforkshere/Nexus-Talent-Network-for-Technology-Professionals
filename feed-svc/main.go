@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
@@ -14,9 +17,13 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/feed-svc/graph"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/feed-svc/internal/auth"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/feed-svc/internal/kafka"
 )
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		dbURL = "postgres://nexus:nexus@localhost:5432/nexus?sslmode=disable"
@@ -41,6 +48,8 @@ func main() {
 	rdb := redis.NewClient(opt)
 	log.Println("connected to redis")
 
+	go kafka.ConsumeJobPosted(ctx, db, rdb)
+
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{DB: db, Redis: rdb},
 	}))
@@ -59,5 +68,8 @@ func main() {
 	})
 
 	log.Printf("feed-svc listening on :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	go http.ListenAndServe(":"+port, nil)
+
+	<-ctx.Done()
+	log.Println("feed-svc shutting down")
 }

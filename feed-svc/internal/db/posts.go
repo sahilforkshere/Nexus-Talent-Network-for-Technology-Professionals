@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 type Post struct {
@@ -32,14 +33,26 @@ func GetPostsByIDs(ctx context.Context, db *sql.DB, ids []string) ([]*Post, erro
 		return nil, nil
 	}
 
-	// build $1,$2,$3... placeholders
+	// filter out job: prefixed items — those are job events, not posts
+	var postIDs []string
+	for _, id := range ids {
+		if len(id) > 4 && id[:4] == "job:" {
+			continue
+		}
+		postIDs = append(postIDs, id)
+	}
+	if len(postIDs) == 0 {
+		return nil, nil
+	}
+
+	// build $1,$2,$3... placeholders correctly
 	placeholders := ""
-	args := make([]any, len(ids))
-	for i, id := range ids {
+	args := make([]any, len(postIDs))
+	for i, id := range postIDs {
 		if i > 0 {
 			placeholders += ","
 		}
-		placeholders += "$" + string(rune('1'+i))
+		placeholders += fmt.Sprintf("$%d", i+1)
 		args[i] = id
 	}
 
