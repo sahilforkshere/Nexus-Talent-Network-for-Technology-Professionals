@@ -1,0 +1,21 @@
+type ConnectionRequest {
+  from_user_id: ID!
+  to_user_id: ID!
+  status: String!
+}
+
+type PersonSuggestion {
+  user_id: ID!
+  name: String!
+  location: String!
+  mutual_count: Int!
+}
+
+type Query {
+  getPeopleYouMayKnow: [PersonSuggestion!]!
+}
+
+type Mutation {
+  sendConnectionRequest(to_user_id: ID!): ConnectionRequest!
+  acceptConnection(from_user_id: ID!): Boolean!
+}

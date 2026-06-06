@@ -84,6 +84,47 @@ func PeopleYouMayKnow(ctx context.Context, driver neo4j.DriverWithContext, userI
 	return result.([]map[string]any), nil
 }
 
+// CreatePendingRequest creates a PENDING edge from userIDA to userIDB.
+// This is the "Connect" button click — not yet a full connection.
+func CreatePendingRequest(ctx context.Context, driver neo4j.DriverWithContext, fromUserID, toUserID string) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer session.Close(ctx)
+
+	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		_, err := tx.Run(ctx, `
+			MATCH (a:Person {user_id: $from_id})
+			MATCH (b:Person {user_id: $to_id})
+			MERGE (a)-[:PENDING_REQUEST]->(b)
+		`, map[string]any{
+			"from_id": fromUserID,
+			"to_id":   toUserID,
+		})
+		return nil, err
+	})
+	return err
+}
+
+// AcceptPendingRequest removes the PENDING_REQUEST edge and creates bidirectional CONNECTED_TO edges.
+// Called when the recipient clicks Accept.
+func AcceptPendingRequest(ctx context.Context, driver neo4j.DriverWithContext, fromUserID, toUserID string) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer session.Close(ctx)
+
+	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		_, err := tx.Run(ctx, `
+			MATCH (a:Person {user_id: $from_id})-[r:PENDING_REQUEST]->(b:Person {user_id: $to_id})
+			DELETE r
+			MERGE (a)-[:CONNECTED_TO]->(b)
+			MERGE (b)-[:CONNECTED_TO]->(a)
+		`, map[string]any{
+			"from_id": fromUserID,
+			"to_id":   toUserID,
+		})
+		return nil, err
+	})
+	return err
+}
+
 // MutualConnectionCount returns how many mutual connections two users share.
 // Shown as "12 mutual connections" on profile cards.
 func MutualConnectionCount(ctx context.Context, driver neo4j.DriverWithContext, userIDA, userIDB string) (int64, error) {
