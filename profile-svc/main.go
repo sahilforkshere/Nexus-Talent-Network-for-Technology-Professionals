@@ -14,6 +14,7 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/graph"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/auth"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/kafka"
 	_ "github.com/lib/pq"
 )
 
@@ -46,6 +47,13 @@ func main() {
 		log.Fatalf("failed to connect to neo4j: %v", err)
 	}
 	log.Println("connected to neo4j")
+
+	// Init Kafka producer so Register can publish user_created events
+	kafkaBroker := os.Getenv("KAFKA_BROKER")
+	if kafkaBroker == "" {
+		kafkaBroker = "localhost:9092"
+	}
+	kafka.Init(kafkaBroker)
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{DB: db, Neo4j: neo4jDriver},

@@ -7,6 +7,7 @@ import (
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/graph/model"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/auth"
 	userdb "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/db"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/kafka"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -32,6 +33,9 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 
 	// Mirror the new user as a Person node in Neo4j for graph traversal queries
 	_ = userdb.CreatePersonNode(ctx, r.Neo4j, u.UserID, u.Name, location)
+
+	// Publish user_created event to Kafka — network-svc also listens and creates Person node
+	kafka.PublishUserCreated(ctx, u.UserID, u.Name, location)
 
 	// Generate JWT tokens
 	accessToken, err := auth.GenerateAccessToken(u.UserID)
