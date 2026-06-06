@@ -1,0 +1,21 @@
+type Post {
+  post_id: ID!
+  user_id: ID!
+  content: String!
+  created_at: String!
+}
+
+type FeedItem {
+  post_id: ID!
+  user_id: ID!
+  content: String!
+  created_at: String!
+}
+
+type Query {
+  getFeed: [FeedItem!]!
+}
+
+type Mutation {
+  createPost(content: String!): Post!
+}
