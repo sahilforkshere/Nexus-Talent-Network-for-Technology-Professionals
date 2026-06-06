@@ -14,3 +14,8 @@ resolver:
   dir: graph
   package: graph
   filename_template: "{name}.resolvers.go"
+
+federation:
+  filename: graph/federation.go
+  package: graph
+  version: 2

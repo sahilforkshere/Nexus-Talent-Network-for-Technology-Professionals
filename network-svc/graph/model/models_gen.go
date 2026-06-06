@@ -18,5 +18,7 @@ type PersonSuggestion struct {
 	MutualCount int    `json:"mutual_count"`
 }
 
+func (PersonSuggestion) IsEntity() {}
+
 type Query struct {
 }

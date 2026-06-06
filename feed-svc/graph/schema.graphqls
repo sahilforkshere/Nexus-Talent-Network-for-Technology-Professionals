@@ -1,4 +1,4 @@
-type Post {
+type Post @key(fields: "post_id") {
   post_id: ID!
   user_id: ID!
   content: String!

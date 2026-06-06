@@ -17,6 +17,8 @@ type Job struct {
 	CreatedAt       string  `json:"created_at"`
 }
 
+func (Job) IsEntity() {}
+
 type Mutation struct {
 }
 

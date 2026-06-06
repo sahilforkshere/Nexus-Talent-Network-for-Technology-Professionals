@@ -4,7 +4,7 @@ type ConnectionRequest {
   status: String!
 }
 
-type PersonSuggestion {
+type PersonSuggestion @key(fields: "user_id") {
   user_id: ID!
   name: String!
   location: String!

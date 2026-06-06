@@ -19,5 +19,7 @@ type Post struct {
 	CreatedAt string `json:"created_at"`
 }
 
+func (Post) IsEntity() {}
+
 type Query struct {
 }

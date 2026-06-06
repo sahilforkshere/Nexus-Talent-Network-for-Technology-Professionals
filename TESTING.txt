@@ -1,6 +1,6 @@
 ================================================================================
 NEXUS — TESTING CREDENTIALS & REFERENCE
-Last updated: Day 10 Phase 1
+Last updated: Day 11 Phase 1
 ================================================================================
 
 ALL USERS (password for everyone: nexus123)
@@ -250,8 +250,10 @@ Day 8 P1 : Kafka flow — profile-svc publishes user_created, network-svc consum
 Day 9    : jobs-svc — postJob, search (Elasticsearch), Kafka job_posted event
 Day 10P1 : feed-svc — createPost, getFeed (Redis sorted set + Postgres)
 
+Day 11P1 : Federation prep — @key on all types, federation.go generated in all 4 services
+
 NEXT:
-Day 10P2 : feed-svc Kafka consumer — auto-push job_posted to all user feeds
-Day 11   : GraphQL Federation (Apollo Router) — one unified API at :4000
+Day 11P2 : Apollo Router setup (router.yaml + supergraph) → unified API at :4000
+Day 11P3 : Test cross-service queries through :4000
 Day 12   : Semantic job search with pgvector + embeddings
 ================================================================================
