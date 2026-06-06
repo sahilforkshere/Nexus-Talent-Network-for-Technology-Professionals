@@ -1,21 +1,36 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/extension"
+	"github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/graph"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/auth"
 )
 
 func main() {
+	srv := handler.New(graph.NewExecutableSchema(graph.Config{
+		Resolvers: &graph.Resolver{},
+	}))
+	srv.AddTransport(transport.POST{})
+	srv.Use(extension.Introspection{})
+
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "4005"
 	}
-	svcName := "search-svc"
+
+	http.Handle("/", playground.Handler("Search Service", "/query"))
+	http.Handle("/query", auth.Middleware(srv))
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "%s ok", svcName)
+		w.Write([]byte("search-svc ok"))
 	})
-	log.Printf("%s listening on :%s", svcName, port)
+
+	log.Printf("search-svc listening on :%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

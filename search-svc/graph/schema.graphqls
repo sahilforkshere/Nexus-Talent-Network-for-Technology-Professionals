@@ -1,0 +1,21 @@
+type JobResult {
+  job_id: ID!
+  title: String!
+  company: String!
+  location: String
+  job_type: String!
+  experience_level: String!
+}
+
+type UserResult {
+  user_id: ID!
+  name: String!
+  headline: String
+  location: String
+}
+
+union SearchResult = JobResult | UserResult
+
+type Query {
+  search(query: String!): [SearchResult!]!
+}
