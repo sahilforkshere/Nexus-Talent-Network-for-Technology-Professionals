@@ -1,6 +1,6 @@
 ================================================================================
 NEXUS — TESTING CREDENTIALS & REFERENCE
-Last updated: Day 11 Phase 1
+Last updated: Day 11 COMPLETE
 ================================================================================
 
 ALL USERS (password for everyone: nexus123)
@@ -33,11 +33,16 @@ Elasticsearch → localhost:9200
 
 STARTING ALL SERVICES
 ---------------------
+Docker:      cd /Users/sahil/Documents/Nexus && docker compose up -d
 Terminal 1:  cd /Users/sahil/Documents/Nexus/profile-svc  && go run .
 Terminal 2:  cd /Users/sahil/Documents/Nexus/network-svc  && go run .
 Terminal 3:  cd /Users/sahil/Documents/Nexus/jobs-svc     && go run .
 Terminal 4:  cd /Users/sahil/Documents/Nexus/feed-svc     && go run .
-Docker:      cd /Users/sahil/Documents/Nexus && docker compose up -d
+Terminal 5:  cd /Users/sahil/Documents/Nexus && APOLLO_ELV2_LICENSE=accept ./router/router --config router.yaml --supergraph supergraph.graphql
+
+UNIFIED API (Apollo Router):  localhost:4000  ← single endpoint for everything
+Recompose supergraph (run when any schema changes, all 4 services must be up):
+  APOLLO_ELV2_LICENSE=accept ~/.rover/bin/rover supergraph compose --config supergraph.yaml 2>/dev/null > supergraph.graphql
 
 
 HOW TO GET AN ACCESS TOKEN (run at localhost:4001)
@@ -250,10 +255,10 @@ Day 8 P1 : Kafka flow — profile-svc publishes user_created, network-svc consum
 Day 9    : jobs-svc — postJob, search (Elasticsearch), Kafka job_posted event
 Day 10P1 : feed-svc — createPost, getFeed (Redis sorted set + Postgres)
 
-Day 11P1 : Federation prep — @key on all types, federation.go generated in all 4 services
+Day 11   : GraphQL Federation COMPLETE — Apollo Router at :4000, all 4 services unified
 
 NEXT:
-Day 11P2 : Apollo Router setup (router.yaml + supergraph) → unified API at :4000
-Day 11P3 : Test cross-service queries through :4000
-Day 12   : Semantic job search with pgvector + embeddings
+Day 12   : pgvector semantic job search with embeddings (AI-powered)
+Day 13   : search-svc (:4005) — unified search across jobs + profiles
+Day 14   : Polish, README, resume bullets
 ================================================================================

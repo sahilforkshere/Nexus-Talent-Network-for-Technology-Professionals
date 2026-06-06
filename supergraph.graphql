@@ -1,0 +1,196 @@
+schema
+  @link(url: "https://specs.apollo.dev/link/v1.0")
+  @link(url: "https://specs.apollo.dev/join/v0.3", for: EXECUTION)
+{
+  query: Query
+  mutation: Mutation
+}
+
+directive @join__enumValue(graph: join__Graph!) repeatable on ENUM_VALUE
+
+directive @join__field(graph: join__Graph, requires: join__FieldSet, provides: join__FieldSet, type: String, external: Boolean, override: String, usedOverridden: Boolean) repeatable on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+
+directive @join__graph(name: String!, url: String!) on ENUM_VALUE
+
+directive @join__implements(graph: join__Graph!, interface: String!) repeatable on OBJECT | INTERFACE
+
+directive @join__type(graph: join__Graph!, key: join__FieldSet, extension: Boolean! = false, resolvable: Boolean! = true, isInterfaceObject: Boolean! = false) repeatable on OBJECT | INTERFACE | UNION | ENUM | INPUT_OBJECT | SCALAR
+
+directive @join__unionMember(graph: join__Graph!, member: String!) repeatable on UNION
+
+directive @link(url: String, as: String, for: link__Purpose, import: [link__Import]) repeatable on SCHEMA
+
+type AuthPayload
+  @join__type(graph: PROFILE)
+{
+  access_token: String!
+  refresh_token: String!
+  user: User!
+}
+
+type ConnectionRequest
+  @join__type(graph: NETWORK)
+{
+  from_user_id: ID!
+  to_user_id: ID!
+  status: String!
+}
+
+type FeedItem
+  @join__type(graph: FEED)
+{
+  post_id: ID!
+  user_id: ID!
+  content: String!
+  created_at: String!
+}
+
+type Job
+  @join__type(graph: JOBS, key: "job_id")
+{
+  job_id: ID!
+  posted_by: ID
+  title: String!
+  company: String!
+  location: String
+  job_type: String!
+  experience_level: String!
+  salary_min: Int
+  salary_max: Int
+  description: String!
+  is_active: Boolean!
+  created_at: String!
+}
+
+scalar join__FieldSet
+
+enum join__Graph {
+  FEED @join__graph(name: "feed", url: "http://localhost:4004/query")
+  JOBS @join__graph(name: "jobs", url: "http://localhost:4003/query")
+  NETWORK @join__graph(name: "network", url: "http://localhost:4002/query")
+  PROFILE @join__graph(name: "profile", url: "http://localhost:4001/query")
+}
+
+scalar link__Import
+
+enum link__Purpose {
+  """
+  `SECURITY` features provide metadata necessary to securely resolve fields.
+  """
+  SECURITY
+
+  """
+  `EXECUTION` features provide metadata necessary for operation execution.
+  """
+  EXECUTION
+}
+
+input LoginInput
+  @join__type(graph: PROFILE)
+{
+  email: String!
+  password: String!
+}
+
+type Mutation
+  @join__type(graph: FEED)
+  @join__type(graph: JOBS)
+  @join__type(graph: NETWORK)
+  @join__type(graph: PROFILE)
+{
+  createPost(content: String!): Post! @join__field(graph: FEED)
+  postJob(input: PostJobInput!): Job! @join__field(graph: JOBS)
+  sendConnectionRequest(to_user_id: ID!): ConnectionRequest! @join__field(graph: NETWORK)
+  acceptConnection(from_user_id: ID!): Boolean! @join__field(graph: NETWORK)
+  register(input: RegisterInput!): AuthPayload! @join__field(graph: PROFILE)
+  login(input: LoginInput!): AuthPayload! @join__field(graph: PROFILE)
+  updateProfile(input: UpdateProfileInput!): User! @join__field(graph: PROFILE)
+  addSkill(name: String!): Skill! @join__field(graph: PROFILE)
+}
+
+type PersonSuggestion
+  @join__type(graph: NETWORK, key: "user_id")
+{
+  user_id: ID!
+  name: String!
+  location: String!
+  mutual_count: Int!
+}
+
+type Post
+  @join__type(graph: FEED, key: "post_id")
+{
+  post_id: ID!
+  user_id: ID!
+  content: String!
+  created_at: String!
+}
+
+input PostJobInput
+  @join__type(graph: JOBS)
+{
+  title: String!
+  company: String!
+  location: String
+  job_type: String!
+  experience_level: String!
+  salary_min: Int
+  salary_max: Int
+  description: String!
+}
+
+type Query
+  @join__type(graph: FEED)
+  @join__type(graph: JOBS)
+  @join__type(graph: NETWORK)
+  @join__type(graph: PROFILE)
+{
+  getFeed: [FeedItem!]! @join__field(graph: FEED)
+  getJob(job_id: ID!): Job @join__field(graph: JOBS)
+  listJobs: [Job!]! @join__field(graph: JOBS)
+  searchJobs(keyword: String!): [Job!]! @join__field(graph: JOBS)
+  getPeopleYouMayKnow: [PersonSuggestion!]! @join__field(graph: NETWORK)
+  getProfile(user_id: ID!): User @join__field(graph: PROFILE)
+  me: User @join__field(graph: PROFILE)
+}
+
+input RegisterInput
+  @join__type(graph: PROFILE)
+{
+  email: String!
+  password: String!
+  name: String!
+  location: String
+}
+
+type Skill
+  @join__type(graph: PROFILE)
+{
+  skill_id: ID!
+  name: String!
+  endorsed: Int!
+}
+
+input UpdateProfileInput
+  @join__type(graph: PROFILE)
+{
+  name: String
+  headline: String
+  bio: String
+  location: String
+  avatar_url: String
+}
+
+type User
+  @join__type(graph: PROFILE, key: "user_id")
+{
+  user_id: ID!
+  email: String!
+  name: String!
+  headline: String
+  bio: String
+  location: String
+  avatar_url: String
+  skills: [Skill!]!
+  created_at: String!
+}
