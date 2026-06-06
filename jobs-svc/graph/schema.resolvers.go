@@ -7,6 +7,8 @@ import (
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/graph/model"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/auth"
 	jobsdb "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/db"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/kafka"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/search"
 )
 
 func (r *mutationResolver) PostJob(ctx context.Context, input model.PostJobInput) (*model.Job, error) {
@@ -36,6 +38,23 @@ func (r *mutationResolver) PostJob(ctx context.Context, input model.PostJobInput
 		return nil, fmt.Errorf("failed to create job")
 	}
 
+	// Index in Elasticsearch so it's searchable
+	loc := ""
+	if j.Location.Valid {
+		loc = j.Location.String
+	}
+	_ = search.IndexJob(ctx, search.JobDoc{
+		JobID:           j.JobID,
+		Title:           j.Title,
+		Company:         j.Company,
+		Location:        loc,
+		Description:     j.Description,
+		JobType:         j.JobType,
+		ExperienceLevel: j.ExperienceLevel,
+	})
+
+	kafka.PublishJobPosted(ctx, j.JobID, j.Title, j.Company, loc)
+
 	return dbJobToModel(j), nil
 }
 
@@ -59,9 +78,22 @@ func (r *queryResolver) ListJobs(ctx context.Context) ([]*model.Job, error) {
 	return result, nil
 }
 
-// SearchJobs will be implemented in Phase 3 (Elasticsearch)
+// SearchJobs hits Elasticsearch for keyword search, then fetches full job data from Postgres
 func (r *queryResolver) SearchJobs(ctx context.Context, keyword string) ([]*model.Job, error) {
-	return nil, fmt.Errorf("search not yet implemented — coming in Phase 3")
+	ids, err := search.SearchJobs(ctx, keyword)
+	if err != nil {
+		return nil, fmt.Errorf("search failed")
+	}
+
+	var result []*model.Job
+	for _, id := range ids {
+		j, err := jobsdb.GetJobByID(ctx, r.DB, id)
+		if err != nil {
+			continue
+		}
+		result = append(result, dbJobToModel(j))
+	}
+	return result, nil
 }
 
 func dbJobToModel(j *jobsdb.Job) *model.Job {

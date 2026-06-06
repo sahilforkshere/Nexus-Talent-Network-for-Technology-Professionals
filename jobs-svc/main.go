@@ -13,6 +13,8 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/graph"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/auth"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/kafka"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/search"
 )
 
 func main() {
@@ -28,6 +30,21 @@ func main() {
 		log.Fatalf("failed to connect to db: %v", err)
 	}
 	log.Println("connected to postgres")
+
+	esURL := os.Getenv("ELASTICSEARCH_URL")
+	if esURL == "" {
+		esURL = "http://localhost:9200"
+	}
+	if err := search.Init(esURL); err != nil {
+		log.Fatalf("failed to connect to elasticsearch: %v", err)
+	}
+	log.Println("connected to elasticsearch")
+
+	kafkaBroker := os.Getenv("KAFKA_BROKER")
+	if kafkaBroker == "" {
+		kafkaBroker = "localhost:9092"
+	}
+	kafka.Init(kafkaBroker)
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{DB: db},
