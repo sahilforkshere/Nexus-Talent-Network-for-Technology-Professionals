@@ -11,9 +11,19 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/graph"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/auth"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/search"
 )
 
 func main() {
+	esURL := os.Getenv("ELASTICSEARCH_URL")
+	if esURL == "" {
+		esURL = "http://localhost:9200"
+	}
+	if err := search.Init(esURL); err != nil {
+		log.Fatalf("failed to connect to elasticsearch: %v", err)
+	}
+	log.Println("connected to elasticsearch")
+
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{},
 	}))

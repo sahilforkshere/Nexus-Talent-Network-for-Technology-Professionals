@@ -15,6 +15,7 @@ import (
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/graph"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/auth"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/kafka"
+	profilesearch "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/search"
 	_ "github.com/lib/pq"
 )
 
@@ -54,6 +55,16 @@ func main() {
 		kafkaBroker = "localhost:9092"
 	}
 	kafka.Init(kafkaBroker)
+
+	esURL := os.Getenv("ELASTICSEARCH_URL")
+	if esURL == "" {
+		esURL = "http://localhost:9200"
+	}
+	if err := profilesearch.Init(esURL); err != nil {
+		log.Printf("warning: elasticsearch not available: %v", err)
+	} else {
+		log.Println("connected to elasticsearch")
+	}
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{DB: db, Neo4j: neo4jDriver},

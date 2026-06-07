@@ -9,11 +9,39 @@ import (
 	"context"
 
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/graph/model"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/search"
 )
 
 // Search is the resolver for the search field.
 func (r *queryResolver) Search(ctx context.Context, query string) ([]model.SearchResult, error) {
-	return []model.SearchResult{}, nil
+	var results []model.SearchResult
+
+	jobs, _ := search.SearchJobs(ctx, query)
+	for _, j := range jobs {
+		loc := &j.Location
+		results = append(results, &model.JobResult{
+			JobID:           j.JobID,
+			Title:           j.Title,
+			Company:         j.Company,
+			Location:        loc,
+			JobType:         j.JobType,
+			ExperienceLevel: j.ExperienceLevel,
+		})
+	}
+
+	users, _ := search.SearchUsers(ctx, query)
+	for _, u := range users {
+		headline := &u.Headline
+		loc := &u.Location
+		results = append(results, &model.UserResult{
+			UserID:   u.UserID,
+			Name:     u.Name,
+			Headline: headline,
+			Location: loc,
+		})
+	}
+
+	return results, nil
 }
 
 // Query returns QueryResolver implementation.

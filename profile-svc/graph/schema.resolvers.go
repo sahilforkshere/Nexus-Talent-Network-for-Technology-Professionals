@@ -13,6 +13,7 @@ import (
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/auth"
 	userdb "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/db"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/kafka"
+	profilesearch "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/search"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -41,6 +42,15 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 
 	// Publish user_created event to Kafka — network-svc also listens and creates Person node
 	kafka.PublishUserCreated(ctx, u.UserID, u.Name, location)
+
+	// index user in Elasticsearch so search-svc can find them
+	go func() {
+		_ = profilesearch.IndexUser(context.Background(), profilesearch.UserDoc{
+			UserID:   u.UserID,
+			Name:     u.Name,
+			Location: location,
+		})
+	}()
 
 	// Generate JWT tokens
 	accessToken, err := auth.GenerateAccessToken(u.UserID)
