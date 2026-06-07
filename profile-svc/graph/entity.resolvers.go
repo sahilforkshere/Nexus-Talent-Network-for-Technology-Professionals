@@ -10,11 +10,16 @@ import (
 	"fmt"
 
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/graph/model"
+	userdb "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/profile-svc/internal/db"
 )
 
 // FindUserByUserID is the resolver for the findUserByUserID field.
 func (r *entityResolver) FindUserByUserID(ctx context.Context, userID string) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: FindUserByUserID - findUserByUserID"))
+	u, err := userdb.GetUserByID(ctx, r.DB, userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+	return dbUserToModel(u), nil
 }
 
 // Entity returns EntityResolver implementation.

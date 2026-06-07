@@ -10,11 +10,16 @@ import (
 	"fmt"
 
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/graph/model"
+	jobsdb "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/db"
 )
 
 // FindJobByJobID is the resolver for the findJobByJobID field.
 func (r *entityResolver) FindJobByJobID(ctx context.Context, jobID string) (*model.Job, error) {
-	panic(fmt.Errorf("not implemented: FindJobByJobID - findJobByJobID"))
+	j, err := jobsdb.GetJobByID(ctx, r.DB, jobID)
+	if err != nil {
+		return nil, fmt.Errorf("job not found")
+	}
+	return dbJobToModel(j), nil
 }
 
 // Entity returns EntityResolver implementation.

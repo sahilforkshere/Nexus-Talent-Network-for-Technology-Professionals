@@ -7,14 +7,13 @@ package graph
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/network-svc/graph/model"
 )
 
 // FindPersonSuggestionByUserID is the resolver for the findPersonSuggestionByUserID field.
 func (r *entityResolver) FindPersonSuggestionByUserID(ctx context.Context, userID string) (*model.PersonSuggestion, error) {
-	panic(fmt.Errorf("not implemented: FindPersonSuggestionByUserID - findPersonSuggestionByUserID"))
+	return &model.PersonSuggestion{UserID: userID, Name: "", Location: "", MutualCount: 0}, nil
 }
 
 // Entity returns EntityResolver implementation.

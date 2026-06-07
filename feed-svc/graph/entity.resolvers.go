@@ -10,11 +10,22 @@ import (
 	"fmt"
 
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/feed-svc/graph/model"
+	feeddb "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/feed-svc/internal/db"
 )
 
 // FindPostByPostID is the resolver for the findPostByPostID field.
 func (r *entityResolver) FindPostByPostID(ctx context.Context, postID string) (*model.Post, error) {
-	panic(fmt.Errorf("not implemented: FindPostByPostID - findPostByPostID"))
+	posts, err := feeddb.GetPostsByIDs(ctx, r.DB, []string{postID})
+	if err != nil || len(posts) == 0 {
+		return nil, fmt.Errorf("post not found")
+	}
+	p := posts[0]
+	return &model.Post{
+		PostID:    p.PostID,
+		UserID:    p.UserID,
+		Content:   p.Content,
+		CreatedAt: p.CreatedAt,
+	}, nil
 }
 
 // Entity returns EntityResolver implementation.

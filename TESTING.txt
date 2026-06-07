@@ -219,6 +219,37 @@ How the feed works:
 
 
 ================================================================================
+SEARCH-SVC  (localhost:4005)
+================================================================================
+
+Unified search — no token needed:
+  query {
+    search(query: "engineer") {
+      __typename
+      ... on JobResult { title company location }
+      ... on UserResult { name headline location }
+    }
+  }
+
+Semantic job search — no token needed:
+  query {
+    semanticSearchJobs(query: "machine learning AI") {
+      title company location
+    }
+  }
+
+# Check Elasticsearch users index
+curl -s http://localhost:9200/users/_count
+
+# Check Elasticsearch jobs index
+curl -s http://localhost:9200/jobs/_count
+
+# Delete and reindex ES jobs (if duplicates appear):
+curl -X DELETE http://localhost:9200/jobs
+# then restart jobs-svc and re-post jobs
+
+
+================================================================================
 USEFUL DB QUERIES (terminal)
 ================================================================================
 
@@ -257,9 +288,9 @@ Day 9    : jobs-svc — postJob, search (Elasticsearch), Kafka job_posted event
 Day 10P1 : feed-svc — createPost, getFeed (Redis sorted set + Postgres)
 
 Day 11   : GraphQL Federation COMPLETE — Apollo Router at :4000, all 4 services unified
+Day 12   : pgvector semantic search — OpenAI embeddings + pgvector, semanticSearchJobs
+Day 13   : search-svc COMPLETE — unified search (jobs + people), GraphQL union type
 
 NEXT:
-Day 12   : pgvector semantic job search with embeddings (AI-powered)
-Day 13   : search-svc (:4005) — unified search across jobs + profiles
 Day 14   : Polish, README, resume bullets
 ================================================================================
