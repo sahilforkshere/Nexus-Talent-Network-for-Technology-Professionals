@@ -62,6 +62,17 @@ type Job
   created_at: String!
 }
 
+type JobResult
+  @join__type(graph: SEARCH)
+{
+  job_id: ID!
+  title: String!
+  company: String!
+  location: String
+  job_type: String!
+  experience_level: String!
+}
+
 scalar join__FieldSet
 
 enum join__Graph {
@@ -69,6 +80,7 @@ enum join__Graph {
   JOBS @join__graph(name: "jobs", url: "http://localhost:4003/query")
   NETWORK @join__graph(name: "network", url: "http://localhost:4002/query")
   PROFILE @join__graph(name: "profile", url: "http://localhost:4001/query")
+  SEARCH @join__graph(name: "search", url: "http://localhost:4005/query")
 }
 
 scalar link__Import
@@ -144,6 +156,7 @@ type Query
   @join__type(graph: JOBS)
   @join__type(graph: NETWORK)
   @join__type(graph: PROFILE)
+  @join__type(graph: SEARCH)
 {
   getFeed: [FeedItem!]! @join__field(graph: FEED)
   getJob(job_id: ID!): Job @join__field(graph: JOBS)
@@ -153,6 +166,7 @@ type Query
   getPeopleYouMayKnow: [PersonSuggestion!]! @join__field(graph: NETWORK)
   getProfile(user_id: ID!): User @join__field(graph: PROFILE)
   me: User @join__field(graph: PROFILE)
+  search(query: String!): [SearchResult!]! @join__field(graph: SEARCH)
 }
 
 input RegisterInput
@@ -163,6 +177,12 @@ input RegisterInput
   name: String!
   location: String
 }
+
+union SearchResult
+  @join__type(graph: SEARCH)
+  @join__unionMember(graph: SEARCH, member: "JobResult")
+  @join__unionMember(graph: SEARCH, member: "UserResult")
+ = JobResult | UserResult
 
 type Skill
   @join__type(graph: PROFILE)
@@ -194,4 +214,13 @@ type User
   avatar_url: String
   skills: [Skill!]!
   created_at: String!
+}
+
+type UserResult
+  @join__type(graph: SEARCH)
+{
+  user_id: ID!
+  name: String!
+  headline: String
+  location: String
 }
