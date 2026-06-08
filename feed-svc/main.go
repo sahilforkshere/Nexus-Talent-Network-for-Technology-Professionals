@@ -48,6 +48,11 @@ func main() {
 	rdb := redis.NewClient(opt)
 	log.Println("connected to redis")
 
+	brokerURL := os.Getenv("KAFKA_BROKER")
+	if brokerURL == "" {
+		brokerURL = "localhost:9092"
+	}
+	kafka.InitProducer(brokerURL)
 	go kafka.ConsumeJobPosted(ctx, db, rdb)
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{

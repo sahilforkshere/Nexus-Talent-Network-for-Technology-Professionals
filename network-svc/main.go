@@ -37,6 +37,11 @@ func main() {
 	}
 	log.Println("connected to neo4j")
 
+	brokerURL := os.Getenv("KAFKA_BROKER")
+	if brokerURL == "" {
+		brokerURL = "localhost:9092"
+	}
+	kafka.InitProducer(brokerURL)
 	go kafka.ConsumeUserCreated(ctx, driver)
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{

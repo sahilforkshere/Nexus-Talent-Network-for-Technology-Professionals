@@ -11,6 +11,7 @@ import (
 
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/network-svc/graph/model"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/network-svc/internal/auth"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/network-svc/internal/kafka"
 	neo4jdb "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/network-svc/internal/neo4j"
 )
 
@@ -47,6 +48,8 @@ func (r *mutationResolver) AcceptConnection(ctx context.Context, fromUserID stri
 	if err := neo4jdb.AcceptPendingRequest(ctx, r.Neo4j, fromUserID, toUserID); err != nil {
 		return false, fmt.Errorf("failed to accept connection")
 	}
+
+	go kafka.PublishConnectionAccepted(context.Background(), fromUserID, toUserID)
 
 	return true, nil
 }

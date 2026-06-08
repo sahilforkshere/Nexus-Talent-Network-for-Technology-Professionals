@@ -13,6 +13,7 @@ import (
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/feed-svc/internal/auth"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/feed-svc/internal/cache"
 	feeddb "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/feed-svc/internal/db"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/feed-svc/internal/kafka"
 )
 
 // CreatePost saves the post to Postgres and pushes it to the author's own feed in Redis.
@@ -29,6 +30,7 @@ func (r *mutationResolver) CreatePost(ctx context.Context, content string) (*mod
 
 	// Push to the author's own feed so they see their own posts
 	_ = cache.PushToFeed(ctx, r.Redis, userID, p.PostID)
+	go kafka.PublishPostCreated(context.Background(), p.PostID, userID, content)
 
 	return &model.Post{
 		PostID:    p.PostID,
