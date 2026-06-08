@@ -42,7 +42,7 @@ func main() {
 		brokerURL = "localhost:9092"
 	}
 	kafka.InitProducer(brokerURL)
-	go kafka.ConsumeUserCreated(ctx, driver)
+	go kafka.ConsumeUserCreated(ctx, driver, brokerURL)
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{Neo4j: driver},
@@ -52,7 +52,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "4002"
+		port = "4003"
 	}
 
 	http.Handle("/", playground.Handler("Network Service", "/query"))

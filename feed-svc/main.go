@@ -53,7 +53,7 @@ func main() {
 		brokerURL = "localhost:9092"
 	}
 	kafka.InitProducer(brokerURL)
-	go kafka.ConsumeJobPosted(ctx, db, rdb)
+	go kafka.ConsumeJobPosted(ctx, db, rdb, brokerURL)
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{DB: db, Redis: rdb},

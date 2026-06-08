@@ -70,7 +70,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "4003"
+		port = "4002"
 	}
 
 	http.Handle("/", playground.Handler("Jobs Service", "/query"))

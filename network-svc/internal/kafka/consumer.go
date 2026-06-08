@@ -21,9 +21,9 @@ type UserCreatedEvent struct {
 // ConsumeUserCreated listens to the user_created Kafka topic.
 // For every new user registered, creates a Person node in Neo4j.
 // Runs forever in a goroutine — one message at a time, in order.
-func ConsumeUserCreated(ctx context.Context, driver neo4j.DriverWithContext) {
+func ConsumeUserCreated(ctx context.Context, driver neo4j.DriverWithContext, brokerURL string) {
 	reader := kafkago.NewReader(kafkago.ReaderConfig{
-		Brokers:        []string{"localhost:9092"},
+		Brokers:        []string{brokerURL},
 		Topic:          "user_created",
 		GroupID:        "network-svc",  // consumer group = Kafka tracks our position
 		MinBytes:       1,

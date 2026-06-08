@@ -22,9 +22,9 @@ type JobPostedEvent struct {
 // ConsumeJobPosted listens to the job_posted Kafka topic.
 // For every new job, it pushes the job_id into every user's feed in Redis.
 // This is how "Sahil opens feed and sees a new Google job" works automatically.
-func ConsumeJobPosted(ctx context.Context, db *sql.DB, rdb *redis.Client) {
+func ConsumeJobPosted(ctx context.Context, db *sql.DB, rdb *redis.Client, brokerURL string) {
 	reader := kafkago.NewReader(kafkago.ReaderConfig{
-		Brokers:        []string{"localhost:9092"},
+		Brokers:        []string{brokerURL},
 		Topic:          "job_posted",
 		GroupID:        "feed-svc",
 		MinBytes:       1,

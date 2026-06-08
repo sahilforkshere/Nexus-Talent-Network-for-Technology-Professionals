@@ -7,14 +7,14 @@ subgraphs:
       subgraph_url: http://localhost:4001/query
 
   network:
-    routing_url: http://localhost:4002/query
-    schema:
-      subgraph_url: http://localhost:4002/query
-
-  jobs:
     routing_url: http://localhost:4003/query
     schema:
       subgraph_url: http://localhost:4003/query
+
+  jobs:
+    routing_url: http://localhost:4002/query
+    schema:
+      subgraph_url: http://localhost:4002/query
 
   feed:
     routing_url: http://localhost:4004/query
