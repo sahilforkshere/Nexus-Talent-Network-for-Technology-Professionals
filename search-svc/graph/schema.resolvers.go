@@ -7,37 +7,68 @@ package graph
 
 import (
 	"context"
+	"sort"
 
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/graph/model"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/auth"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/proximity"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/search"
 )
 
+type rankedJob struct {
+	job   model.JobResult
+	score int
+}
+
 // Search is the resolver for the search field.
 func (r *queryResolver) Search(ctx context.Context, query string) ([]model.SearchResult, error) {
-	var results []model.SearchResult
+	// get caller's user_id for proximity boost (optional — works without auth too)
+	userID, _ := auth.UserIDFromContext(ctx)
 
+	// fetch connected companies from Neo4j (nil if not authenticated or Neo4j down)
+	var connected map[string]int
+	if userID != "" {
+		connected = proximity.ConnectedCompanies(ctx, userID)
+	}
+
+	// fetch jobs from ES and rank by proximity
 	jobs, _ := search.SearchJobs(ctx, query)
+	ranked := make([]rankedJob, 0, len(jobs))
 	for _, j := range jobs {
-		loc := &j.Location
-		results = append(results, &model.JobResult{
-			JobID:           j.JobID,
-			Title:           j.Title,
-			Company:         j.Company,
-			Location:        loc,
-			JobType:         j.JobType,
-			ExperienceLevel: j.ExperienceLevel,
+		score := proximity.ProximityScore(j.Company, connected)
+		loc := j.Location
+		ranked = append(ranked, rankedJob{
+			score: score,
+			job: model.JobResult{
+				JobID:           j.JobID,
+				Title:           j.Title,
+				Company:         j.Company,
+				Location:        &loc,
+				JobType:         j.JobType,
+				ExperienceLevel: j.ExperienceLevel,
+			},
 		})
+	}
+	// stable sort: higher score first, ES relevance order preserved within same score
+	sort.SliceStable(ranked, func(i, j int) bool {
+		return ranked[i].score > ranked[j].score
+	})
+
+	var results []model.SearchResult
+	for i := range ranked {
+		r := ranked[i]
+		results = append(results, &r.job)
 	}
 
 	users, _ := search.SearchUsers(ctx, query)
 	for _, u := range users {
-		headline := &u.Headline
-		loc := &u.Location
+		headline := u.Headline
+		loc := u.Location
 		results = append(results, &model.UserResult{
 			UserID:   u.UserID,
 			Name:     u.Name,
-			Headline: headline,
-			Location: loc,
+			Headline: &headline,
+			Location: &loc,
 		})
 	}
 

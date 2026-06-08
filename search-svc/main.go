@@ -11,6 +11,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/graph"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/auth"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/proximity"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/search"
 )
 
@@ -23,6 +24,24 @@ func main() {
 		log.Fatalf("failed to connect to elasticsearch: %v", err)
 	}
 	log.Println("connected to elasticsearch")
+
+	neo4jURI := os.Getenv("NEO4J_URI")
+	if neo4jURI == "" {
+		neo4jURI = "bolt://localhost:7687"
+	}
+	neo4jUser := os.Getenv("NEO4J_USER")
+	if neo4jUser == "" {
+		neo4jUser = "neo4j"
+	}
+	neo4jPass := os.Getenv("NEO4J_PASSWORD")
+	if neo4jPass == "" {
+		neo4jPass = "nexuspassword"
+	}
+	if err := proximity.Init(neo4jURI, neo4jUser, neo4jPass); err != nil {
+		log.Printf("warning: neo4j unavailable, proximity boost disabled: %v", err)
+	} else {
+		log.Println("connected to neo4j")
+	}
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{},
