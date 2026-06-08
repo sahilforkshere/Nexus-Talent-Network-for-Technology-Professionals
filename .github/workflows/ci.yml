@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  GOTOOLCHAIN: auto
+  GOWORK: off
+
+jobs:
+  build:
+    name: Build & Vet
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: false
+
+      - name: Build & vet profile-svc
+        working-directory: profile-svc
+        run: |
+          go build ./...
+          go vet ./...
+
+      - name: Build & vet jobs-svc
+        working-directory: jobs-svc
+        run: |
+          go build ./...
+          go vet ./...
+
+      - name: Build & vet network-svc
+        working-directory: network-svc
+        run: |
+          go build ./...
+          go vet ./...
+
+      - name: Build & vet feed-svc
+        working-directory: feed-svc
+        run: |
+          go build ./...
+          go vet ./...
+
+      - name: Build & vet search-svc
+        working-directory: search-svc
+        run: |
+          go build ./...
+          go vet ./...
