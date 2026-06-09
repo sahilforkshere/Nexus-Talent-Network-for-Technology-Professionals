@@ -36,6 +36,20 @@ type ConnectionRequest
   status: String!
 }
 
+type FeedConnection
+  @join__type(graph: FEED)
+{
+  edges: [FeedEdge!]!
+  pageInfo: PageInfo!
+}
+
+type FeedEdge
+  @join__type(graph: FEED)
+{
+  cursor: String!
+  node: FeedItem!
+}
+
 type FeedItem
   @join__type(graph: FEED)
 {
@@ -60,6 +74,20 @@ type Job
   description: String!
   is_active: Boolean!
   created_at: String!
+}
+
+type JobConnection
+  @join__type(graph: JOBS)
+{
+  edges: [JobEdge!]!
+  pageInfo: PageInfo!
+}
+
+type JobEdge
+  @join__type(graph: JOBS)
+{
+  cursor: String!
+  node: Job!
 }
 
 type JobResult
@@ -120,6 +148,14 @@ type Mutation
   addSkill(name: String!): Skill! @join__field(graph: PROFILE)
 }
 
+type PageInfo
+  @join__type(graph: FEED)
+  @join__type(graph: JOBS)
+{
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
 type PersonSuggestion
   @join__type(graph: NETWORK, key: "user_id")
 {
@@ -158,9 +194,9 @@ type Query
   @join__type(graph: PROFILE)
   @join__type(graph: SEARCH)
 {
-  getFeed: [FeedItem!]! @join__field(graph: FEED)
+  getFeed(first: Int, after: String): FeedConnection! @join__field(graph: FEED)
   getJob(job_id: ID!): Job @join__field(graph: JOBS)
-  listJobs: [Job!]! @join__field(graph: JOBS)
+  listJobs(first: Int, after: String): JobConnection! @join__field(graph: JOBS)
   searchJobs(keyword: String!): [Job!]! @join__field(graph: JOBS)
   semanticSearchJobs(query: String!): [Job!]! @join__field(graph: JOBS)
   getPeopleYouMayKnow: [PersonSuggestion!]! @join__field(graph: NETWORK)
