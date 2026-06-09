@@ -61,6 +61,40 @@ func ListJobs(ctx context.Context, db *sql.DB) ([]*Job, error) {
 	return jobs, nil
 }
 
+func ListJobsCursor(ctx context.Context, db *sql.DB, limit int, after *string) ([]*Job, error) {
+	var rows *sql.Rows
+	var err error
+	if after != nil && *after != "" {
+		// decode cursor — it's just the job_id (base64 decoded by caller)
+		rows, err = db.QueryContext(ctx, `
+			SELECT job_id, posted_by, title, company, location, job_type, experience_level, salary_min, salary_max, description, is_active, created_at::text
+			FROM jobs WHERE is_active = true AND created_at < (SELECT created_at FROM jobs WHERE job_id = $1)
+			ORDER BY created_at DESC LIMIT $2
+		`, *after, limit)
+	} else {
+		rows, err = db.QueryContext(ctx, `
+			SELECT job_id, posted_by, title, company, location, job_type, experience_level, salary_min, salary_max, description, is_active, created_at::text
+			FROM jobs WHERE is_active = true ORDER BY created_at DESC LIMIT $1
+		`, limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var jobs []*Job
+	for rows.Next() {
+		j := &Job{}
+		if err := rows.Scan(&j.JobID, &j.PostedBy, &j.Title, &j.Company, &j.Location,
+			&j.JobType, &j.ExperienceLevel, &j.SalaryMin, &j.SalaryMax,
+			&j.Description, &j.IsActive, &j.CreatedAt); err != nil {
+			return nil, err
+		}
+		jobs = append(jobs, j)
+	}
+	return jobs, nil
+}
+
+
 func scanJob(row *sql.Row) (*Job, error) {
 	j := &Job{}
 	err := row.Scan(&j.JobID, &j.PostedBy, &j.Title, &j.Company, &j.Location,

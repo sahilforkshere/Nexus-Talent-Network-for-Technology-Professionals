@@ -2,6 +2,16 @@
 
 package model
 
+type FeedConnection struct {
+	Edges    []*FeedEdge `json:"edges"`
+	PageInfo *PageInfo   `json:"pageInfo"`
+}
+
+type FeedEdge struct {
+	Cursor string    `json:"cursor"`
+	Node   *FeedItem `json:"node"`
+}
+
 type FeedItem struct {
 	PostID    string `json:"post_id"`
 	UserID    string `json:"user_id"`
@@ -10,6 +20,11 @@ type FeedItem struct {
 }
 
 type Mutation struct {
+}
+
+type PageInfo struct {
+	HasNextPage bool    `json:"hasNextPage"`
+	EndCursor   *string `json:"endCursor,omitempty"`
 }
 
 type Post struct {

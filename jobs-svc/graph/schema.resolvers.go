@@ -84,16 +84,49 @@ func (r *queryResolver) GetJob(ctx context.Context, jobID string) (*model.Job, e
 }
 
 // ListJobs is the resolver for the listJobs field.
-func (r *queryResolver) ListJobs(ctx context.Context) ([]*model.Job, error) {
-	jobs, err := jobsdb.ListJobs(ctx, r.DB)
+func (r *queryResolver) ListJobs(ctx context.Context, first *int, after *string) (*model.JobConnection, error) {
+	limit := 10
+	if first != nil && *first > 0 {
+		limit = *first
+	}
+
+	var decodedAfter *string
+	if after != nil {
+		d := decodeCursor(*after)
+		decodedAfter = &d
+	}
+	jobs, err := jobsdb.ListJobsCursor(ctx, r.DB, limit+1, decodedAfter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch jobs")
 	}
-	var result []*model.Job
-	for _, j := range jobs {
-		result = append(result, dbJobToModel(j))
+
+	hasNextPage := len(jobs) > limit
+	if hasNextPage {
+		jobs = jobs[:limit]
 	}
-	return result, nil
+
+	edges := make([]*model.JobEdge, 0, len(jobs))
+	for _, j := range jobs {
+		cursor := encodeCursor(j.JobID)
+		edges = append(edges, &model.JobEdge{
+			Cursor: cursor,
+			Node:   dbJobToModel(j),
+		})
+	}
+
+	var endCursor *string
+	if len(edges) > 0 {
+		c := edges[len(edges)-1].Cursor
+		endCursor = &c
+	}
+
+	return &model.JobConnection{
+		Edges: edges,
+		PageInfo: &model.PageInfo{
+			HasNextPage: hasNextPage,
+			EndCursor:   endCursor,
+		},
+	}, nil
 }
 
 // SearchJobs hits Elasticsearch for keyword search, then fetches full job data from Postgres
@@ -144,30 +177,3 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 
-func dbJobToModel(j *jobsdb.Job) *model.Job {
-	job := &model.Job{
-		JobID:           j.JobID,
-		Title:           j.Title,
-		Company:         j.Company,
-		JobType:         j.JobType,
-		ExperienceLevel: j.ExperienceLevel,
-		Description:     j.Description,
-		IsActive:        j.IsActive,
-		CreatedAt:       j.CreatedAt,
-	}
-	if j.PostedBy.Valid {
-		job.PostedBy = &j.PostedBy.String
-	}
-	if j.Location.Valid {
-		job.Location = &j.Location.String
-	}
-	if j.SalaryMin.Valid {
-		v := int(j.SalaryMin.Int32)
-		job.SalaryMin = &v
-	}
-	if j.SalaryMax.Valid {
-		v := int(j.SalaryMax.Int32)
-		job.SalaryMax = &v
-	}
-	return job
-}

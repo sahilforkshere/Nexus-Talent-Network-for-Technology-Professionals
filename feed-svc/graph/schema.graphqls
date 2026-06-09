@@ -12,8 +12,23 @@ type FeedItem {
   created_at: String!
 }
 
+type FeedEdge {
+  cursor: String!
+  node: FeedItem!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type FeedConnection {
+  edges: [FeedEdge!]!
+  pageInfo: PageInfo!
+}
+
 type Query {
-  getFeed: [FeedItem!]!
+  getFeed(first: Int, after: String): FeedConnection!
 }
 
 type Mutation {

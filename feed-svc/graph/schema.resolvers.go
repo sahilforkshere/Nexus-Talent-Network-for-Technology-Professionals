@@ -42,7 +42,7 @@ func (r *mutationResolver) CreatePost(ctx context.Context, content string) (*mod
 
 // GetFeed reads the logged-in user's feed from Redis, then fetches full details from Postgres.
 // Items can be posts (plain UUID) or jobs (prefixed with "job:")
-func (r *queryResolver) GetFeed(ctx context.Context) ([]*model.FeedItem, error) {
+func (r *queryResolver) GetFeed(ctx context.Context, first *int, after *string) (*model.FeedConnection, error) {
 	userID, ok := auth.UserIDFromContext(ctx)
 	if !ok {
 		return nil, fmt.Errorf("not authenticated")
@@ -95,7 +95,50 @@ func (r *queryResolver) GetFeed(ctx context.Context) ([]*model.FeedItem, error) 
 		})
 	}
 
-	return items, nil
+	// apply pagination: cursor is the index into the items slice (simple offset cursor)
+	limit := 10
+	if first != nil && *first > 0 {
+		limit = *first
+	}
+
+	start := 0
+	if after != nil && *after != "" {
+		// cursor is base64(index)
+		idx, err2 := decodeFeedCursor(*after)
+		if err2 == nil {
+			start = idx + 1
+		}
+	}
+
+	end := start + limit
+	hasNextPage := end < len(items)
+	if end > len(items) {
+		end = len(items)
+	}
+	items = items[start:end]
+
+	edges := make([]*model.FeedEdge, 0, len(items))
+	for i, item := range items {
+		cursor := encodeFeedCursor(start + i)
+		edges = append(edges, &model.FeedEdge{
+			Cursor: cursor,
+			Node:   item,
+		})
+	}
+
+	var endCursor *string
+	if len(edges) > 0 {
+		c := edges[len(edges)-1].Cursor
+		endCursor = &c
+	}
+
+	return &model.FeedConnection{
+		Edges: edges,
+		PageInfo: &model.PageInfo{
+			HasNextPage: hasNextPage,
+			EndCursor:   endCursor,
+		},
+	}, nil
 }
 
 // Mutation returns MutationResolver implementation.

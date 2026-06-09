@@ -24,9 +24,24 @@ input PostJobInput {
   description: String!
 }
 
+type JobEdge {
+  cursor: String!
+  node: Job!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type JobConnection {
+  edges: [JobEdge!]!
+  pageInfo: PageInfo!
+}
+
 type Query {
   getJob(job_id: ID!): Job
-  listJobs: [Job!]!
+  listJobs(first: Int, after: String): JobConnection!
   searchJobs(keyword: String!): [Job!]!
   semanticSearchJobs(query: String!): [Job!]!
 }

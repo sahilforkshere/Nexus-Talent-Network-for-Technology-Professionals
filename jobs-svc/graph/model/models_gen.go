@@ -19,7 +19,22 @@ type Job struct {
 
 func (Job) IsEntity() {}
 
+type JobConnection struct {
+	Edges    []*JobEdge `json:"edges"`
+	PageInfo *PageInfo  `json:"pageInfo"`
+}
+
+type JobEdge struct {
+	Cursor string `json:"cursor"`
+	Node   *Job   `json:"node"`
+}
+
 type Mutation struct {
+}
+
+type PageInfo struct {
+	HasNextPage bool    `json:"hasNextPage"`
+	EndCursor   *string `json:"endCursor,omitempty"`
 }
 
 type PostJobInput struct {
