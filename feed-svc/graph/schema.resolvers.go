@@ -100,6 +100,9 @@ func (r *queryResolver) GetFeed(ctx context.Context, first *int, after *string) 
 	if first != nil && *first > 0 {
 		limit = *first
 	}
+	if limit > 50 {
+		limit = 50
+	}
 
 	start := 0
 	if after != nil && *after != "" {

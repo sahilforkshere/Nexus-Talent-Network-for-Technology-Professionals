@@ -89,6 +89,9 @@ func (r *queryResolver) ListJobs(ctx context.Context, first *int, after *string)
 	if first != nil && *first > 0 {
 		limit = *first
 	}
+	if limit > 50 {
+		limit = 50
+	}
 
 	var decodedAfter *string
 	if after != nil {

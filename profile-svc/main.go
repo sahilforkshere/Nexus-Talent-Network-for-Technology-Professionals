@@ -71,6 +71,7 @@ func main() {
 	}))
 	srv.AddTransport(transport.POST{})
 	srv.Use(extension.Introspection{})
+	srv.Use(extension.FixedComplexityLimit(200))
 
 	port := os.Getenv("PORT")
 	if port == "" {
