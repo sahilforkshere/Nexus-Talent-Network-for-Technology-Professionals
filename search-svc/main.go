@@ -11,6 +11,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/graph"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/auth"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/expand"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/proximity"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/search"
 )
@@ -37,6 +38,8 @@ func main() {
 	if neo4jPass == "" {
 		neo4jPass = "nexuspassword"
 	}
+	expand.Init()
+
 	if err := proximity.Init(neo4jURI, neo4jUser, neo4jPass); err != nil {
 		log.Printf("warning: neo4j unavailable, proximity boost disabled: %v", err)
 	} else {

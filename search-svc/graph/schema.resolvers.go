@@ -11,6 +11,7 @@ import (
 
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/graph/model"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/auth"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/expand"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/proximity"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/search-svc/internal/search"
 )
@@ -31,8 +32,11 @@ func (r *queryResolver) Search(ctx context.Context, query string) ([]model.Searc
 		connected = proximity.ConnectedCompanies(ctx, userID)
 	}
 
+	// expand query with LLM synonyms before hitting ES
+	expandedQuery := expand.Query(ctx, query)
+
 	// fetch jobs from ES and rank by proximity
-	jobs, _ := search.SearchJobs(ctx, query)
+	jobs, _ := search.SearchJobs(ctx, expandedQuery)
 	ranked := make([]rankedJob, 0, len(jobs))
 	for _, j := range jobs {
 		score := proximity.ProximityScore(j.Company, connected)
@@ -60,7 +64,7 @@ func (r *queryResolver) Search(ctx context.Context, query string) ([]model.Searc
 		results = append(results, &r.job)
 	}
 
-	users, _ := search.SearchUsers(ctx, query)
+	users, _ := search.SearchUsers(ctx, expandedQuery)
 	for _, u := range users {
 		headline := u.Headline
 		loc := u.Location
