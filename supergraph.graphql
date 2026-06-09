@@ -199,6 +199,7 @@ type Query
   listJobs(first: Int, after: String): JobConnection! @join__field(graph: JOBS)
   searchJobs(keyword: String!): [Job!]! @join__field(graph: JOBS)
   semanticSearchJobs(query: String!): [Job!]! @join__field(graph: JOBS)
+  recommendJobs: [Job!]! @join__field(graph: JOBS)
   getPeopleYouMayKnow: [PersonSuggestion!]! @join__field(graph: NETWORK)
   getProfile(user_id: ID!): User @join__field(graph: PROFILE)
   me: User @join__field(graph: PROFILE)

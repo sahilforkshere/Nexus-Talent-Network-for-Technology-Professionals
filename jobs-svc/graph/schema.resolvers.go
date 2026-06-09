@@ -8,12 +8,14 @@ package graph
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/graph/model"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/auth"
 	jobsdb "github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/db"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/embedding"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/kafka"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/recommend"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/search"
 )
 
@@ -171,6 +173,41 @@ func (r *queryResolver) SemanticSearchJobs(ctx context.Context, query string) ([
 	return result, nil
 }
 
+// RecommendJobs returns jobs at companies where the caller's connections work.
+func (r *queryResolver) RecommendJobs(ctx context.Context) ([]*model.Job, error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("not authenticated")
+	}
+
+	companies := recommend.CompaniesForUser(ctx, userID)
+	if len(companies) == 0 {
+		return []*model.Job{}, nil
+	}
+
+	// collect company names for SQL query
+	names := make([]string, 0, len(companies))
+	for c := range companies {
+		names = append(names, c)
+	}
+
+	jobs, err := jobsdb.ListJobsByCompanies(ctx, r.DB, names)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch recommended jobs")
+	}
+
+	// sort by connection score (1st degree first)
+	sort.Slice(jobs, func(i, j int) bool {
+		return companies[jobs[i].Company] > companies[jobs[j].Company]
+	})
+
+	var result []*model.Job
+	for _, j := range jobs {
+		result = append(result, dbJobToModel(j))
+	}
+	return result, nil
+}
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
@@ -179,4 +216,3 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-

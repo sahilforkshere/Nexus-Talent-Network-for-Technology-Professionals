@@ -80,6 +80,7 @@ type ComplexityRoot struct {
 	Query struct {
 		GetJob             func(childComplexity int, jobID string) int
 		ListJobs           func(childComplexity int, first *int, after *string) int
+		RecommendJobs      func(childComplexity int) int
 		SearchJobs         func(childComplexity int, keyword string) int
 		SemanticSearchJobs func(childComplexity int, query string) int
 		__resolve__service func(childComplexity int) int
@@ -102,6 +103,7 @@ type QueryResolver interface {
 	ListJobs(ctx context.Context, first *int, after *string) (*model.JobConnection, error)
 	SearchJobs(ctx context.Context, keyword string) ([]*model.Job, error)
 	SemanticSearchJobs(ctx context.Context, query string) ([]*model.Job, error)
+	RecommendJobs(ctx context.Context) ([]*model.Job, error)
 }
 
 type executableSchema graphql.ExecutableSchemaState[ResolverRoot, DirectiveRoot, ComplexityRoot]
@@ -277,6 +279,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.ListJobs(childComplexity, args["first"].(*int), args["after"].(*string)), true
+	case "Query.recommendJobs":
+		if e.ComplexityRoot.Query.RecommendJobs == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.RecommendJobs(childComplexity), true
 	case "Query.searchJobs":
 		if e.ComplexityRoot.Query.SearchJobs == nil {
 			break
@@ -1565,6 +1573,38 @@ func (ec *executionContext) fieldContext_Query_semanticSearchJobs(ctx context.Co
 	if fc.Args, err = ec.field_Query_semanticSearchJobs_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_recommendJobs(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_recommendJobs(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().RecommendJobs(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Job) graphql.Marshaler {
+			return ec.marshalNJob2ᚕᚖgithubᚗcomᚋsahilpalᚋNexusᚑTalentNetworkForTechnologyProfessionalsᚋjobsᚑsvcᚋgraphᚋmodelᚐJobᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_recommendJobs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Job(ctx, field)
+		},
 	}
 	return fc, nil
 }
@@ -3326,6 +3366,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_semanticSearchJobs(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "recommendJobs":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_recommendJobs(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

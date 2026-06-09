@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 )
 
 type Job struct {
@@ -94,6 +96,37 @@ func ListJobsCursor(ctx context.Context, db *sql.DB, limit int, after *string) (
 	return jobs, nil
 }
 
+
+func ListJobsByCompanies(ctx context.Context, db *sql.DB, companies []string) ([]*Job, error) {
+	if len(companies) == 0 {
+		return nil, nil
+	}
+	placeholders := make([]string, len(companies))
+	args := make([]any, len(companies))
+	for i, c := range companies {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = c
+	}
+	query := fmt.Sprintf(`SELECT job_id, posted_by, title, company, location, job_type, experience_level, salary_min, salary_max, description, is_active, created_at::text
+		FROM jobs WHERE is_active = true AND company IN (%s) ORDER BY created_at DESC LIMIT 20`,
+		strings.Join(placeholders, ","))
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var jobs []*Job
+	for rows.Next() {
+		j := &Job{}
+		if err := rows.Scan(&j.JobID, &j.PostedBy, &j.Title, &j.Company, &j.Location,
+			&j.JobType, &j.ExperienceLevel, &j.SalaryMin, &j.SalaryMax,
+			&j.Description, &j.IsActive, &j.CreatedAt); err != nil {
+			return nil, err
+		}
+		jobs = append(jobs, j)
+	}
+	return jobs, nil
+}
 
 func scanJob(row *sql.Row) (*Job, error) {
 	j := &Job{}

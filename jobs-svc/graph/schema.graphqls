@@ -44,6 +44,7 @@ type Query {
   listJobs(first: Int, after: String): JobConnection!
   searchJobs(keyword: String!): [Job!]!
   semanticSearchJobs(query: String!): [Job!]!
+  recommendJobs: [Job!]!
 }
 
 type Mutation {

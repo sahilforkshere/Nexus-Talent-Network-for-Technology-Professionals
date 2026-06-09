@@ -15,6 +15,7 @@ import (
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/auth"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/embedding"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/kafka"
+	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/recommend"
 	"github.com/sahilpal/Nexus-TalentNetworkForTechnologyProfessionals/jobs-svc/internal/search"
 )
 
@@ -61,6 +62,14 @@ func main() {
 	}
 	embedding.Init(openAIKey)
 	log.Println("embedding client initialized")
+
+	neo4jURL := os.Getenv("NEO4J_URL")
+	if neo4jURL == "" {
+		neo4jURL = "bolt://localhost:7687"
+	}
+	if err := recommend.Init(neo4jURL, "neo4j", "nexuspassword"); err != nil {
+		log.Printf("warning: neo4j unavailable, recommendations disabled: %v", err)
+	}
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{DB: db},
